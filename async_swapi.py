@@ -10,7 +10,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DB = "swapi_characters.db"
+DB = "swapi_characters.db"  # Файл базы данных
 MIGRATION = "migration.sql"
 URL = "https://www.swapi.tech/api/people/{id}/"
 
@@ -41,7 +41,8 @@ async def fetch(session, char_id):
                     p.get("skin_color"),
                 )
             else:
-                logger.warning(f"API вернул не-ok ответ для персонажа {char_id}: {data.get('message', 'Неизвестная ошибка')}")
+                logger.warning(
+                    f"API вернул не-ok ответ для персонажа {char_id}: {data.get('message', 'Неизвестная ошибка')}")
                 return None
     except asyncio.TimeoutError:
         logger.error(f"Таймаут при получении персонажа {char_id}")
