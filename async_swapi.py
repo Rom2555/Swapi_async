@@ -1,6 +1,14 @@
 import asyncio
 import aiohttp
 import aiosqlite
+import logging
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 DB = "swapi_characters.db"
 MIGRATION = "migration.sql"
@@ -32,16 +40,28 @@ async def fetch(session, char_id):
                     p.get("name"),
                     p.get("skin_color"),
                 )
-    except Exception:
-        pass
-    return None
+            else:
+                logger.warning(f"API вернул не-ok ответ для персонажа {char_id}: {data.get('message', 'Неизвестная ошибка')}")
+                return None
+    except asyncio.TimeoutError:
+        logger.error(f"Таймаут при получении персонажа {char_id}")
+        return None
+    except aiohttp.ClientError as e:
+        logger.error(f"Ошибка клиента при получении персонажа {char_id}: {e}")
+        return None
+    except Exception as e:
+        logger.exception(f"Неожиданная ошибка при получении персонажа {char_id}: {e}")
+        return None
 
 
 async def main():
     # Инициализация БД
     await init_db()
 
-    async with aiohttp.ClientSession() as session:
+    # Настройка сессии с лимитом подключений и таймаутом
+    connector = aiohttp.TCPConnector(limit=10)
+    timeout = aiohttp.ClientTimeout(total=30)
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
         # Получаем общее число персонажей
         async with session.get("https://www.swapi.tech/api/people/") as r:
             total = (await r.json())["total_records"]
@@ -50,22 +70,22 @@ async def main():
             # Выгружаем всех персонажей (ID от 1 до total)
             for start in range(1, total + 1, 50):
                 end = min(start + 49, total)
-                print(f"Загрузка {start}-{end} из {total}...")
+                logger.info(f"Загрузка {start}-{end} из {total}...")
 
                 tasks = [fetch(session, i) for i in range(start, end + 1)]
                 chars = [c for c in await asyncio.gather(*tasks) if c]
 
                 await db.executemany(
                     """
-                    INSERT INTO characters 
-                    (id, birth_year, eye_color, gender, hair_color, 
+                    INSERT INTO characters
+                    (id, birth_year, eye_color, gender, hair_color,
                      homeworld, mass, name, skin_color)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     chars,
                 )
                 await db.commit()
-                print(f"  сохранено {len(chars)} записей")
+                logger.info(f"  сохранено {len(chars)} записей")
 
     # Итог
     async with aiosqlite.connect(DB) as db:
