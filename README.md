@@ -21,6 +21,12 @@ cd Swapi_async
 pip install -r requirements.txt
 ```
 
+3. Создайте файл `.env` на основе шаблона:
+```bash
+cp .env.example .env
+```
+При необходимости отредактируйте значения в `.env` файле.
+
 ## Использование
 
 Перед первым запуском убедитесь, что файл базы данных `swapi_characters.db` существует в корне проекта. Если файла нет, создайте его вручную или используйте предоставленный файл.
@@ -82,14 +88,41 @@ python async_swapi.py
 
 ## Конфигурация
 
-Константы в начале файла:
-```python
-DB = "swapi_characters.db"        # Имя файла базы данных
-MIGRATION = "migration.sql"        # Файл миграции
-URL = "https://www.swapi.tech/api/people/{id}/"  # URL API
+Все конфигурационные параметры вынесены в переменные окружения через `.env` файл.
+
+### Переменные окружения
+
+- `DB` — имя файла базы данных (по умолчанию: `swapi_characters.db`)
+- `MIGRATION` — файл миграции (по умолчанию: `migration.sql`)
+- `URL` — URL API для получения данных персонажа (по умолчанию: `https://www.swapi.tech/api/people/{id}/`)
+- `API_PEOPLE_URL` — URL API для получения списка персонажей (по умолчанию: `https://www.swapi.tech/api/people/`)
+- `CONNECTOR_LIMIT` — лимит одновременных подключений (по умолчанию: `10`)
+- `TIMEOUT` — таймаут запроса в секундах (по умолчанию: `30`)
+- `BATCH_SIZE` — размер пакета для пакетной загрузки (по умолчанию: `50`)
+
+### Пример .env файла
+
+```ini
+# Конфигурация базы данных
+DB=swapi_characters.db
+
+# Файл миграции
+MIGRATION=migration.sql
+
+# URL API SWAPI
+URL=https://www.swapi.tech/api/people/{id}/
+API_PEOPLE_URL=https://www.swapi.tech/api/people/
+
+# Настройки сессии
+CONNECTOR_LIMIT=10
+TIMEOUT=30
+
+# Настройки загрузки
+BATCH_SIZE=50
 ```
 
-Параметры сессии:
+### Константы по умолчанию (если переменные окружения не заданы)
+
 - Лимит подключений: 10
 - Таймаут: 30 секунд
 - Размер пакета: 50 персонажей

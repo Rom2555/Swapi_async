@@ -2,6 +2,11 @@ import asyncio
 import aiohttp
 import aiosqlite
 import logging
+import os
+from dotenv import load_dotenv
+
+# Загрузка переменных окружения из .env файла
+load_dotenv()
 
 # Настройка логирования
 logging.basicConfig(
@@ -10,9 +15,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DB = "swapi_characters.db"  # Файл базы данных
-MIGRATION = "migration.sql"
-URL = "https://www.swapi.tech/api/people/{id}/"
+DB = os.getenv("DB", "swapi_characters.db")  # Файл базы данных
+MIGRATION = os.getenv("MIGRATION", "migration.sql")
+URL = os.getenv("URL", "https://www.swapi.tech/api/people/{id}/")
 
 
 async def init_db():
@@ -60,16 +65,19 @@ async def main():
     await init_db()
 
     # Настройка сессии с лимитом подключений и таймаутом
-    connector = aiohttp.TCPConnector(limit=10)
-    timeout = aiohttp.ClientTimeout(total=30)
+    connector_limit = int(os.getenv("CONNECTOR_LIMIT", 10))
+    timeout_total = int(os.getenv("TIMEOUT", 30))
+    batch_size = int(os.getenv("BATCH_SIZE", 50))
+    connector = aiohttp.TCPConnector(limit=connector_limit)
+    timeout = aiohttp.ClientTimeout(total=timeout_total)
     async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
         # Получаем общее число персонажей
-        async with session.get("https://www.swapi.tech/api/people/") as r:
+        async with session.get(os.getenv("API_PEOPLE_URL", "https://www.swapi.tech/api/people/")) as r:
             total = (await r.json())["total_records"]
 
         async with aiosqlite.connect(DB) as db:
             # Выгружаем всех персонажей (ID от 1 до total)
-            for start in range(1, total + 1, 50):
+            for start in range(1, total + 1, batch_size):
                 end = min(start + 49, total)
                 logger.info(f"Загрузка {start}-{end} из {total}...")
 
