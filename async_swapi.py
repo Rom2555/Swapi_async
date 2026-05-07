@@ -20,8 +20,10 @@ MIGRATION = os.getenv("MIGRATION", "migration.sql")
 URL = os.getenv("URL", "https://www.swapi.tech/api/people/{id}/")
 
 
-async def fetch_json(session, url, max_retries=3):
+async def fetch_json(session, url, max_retries=None):
     """Универсальная функция получения JSON с проверкой статуса и повторными попытками."""
+    if max_retries is None:
+        max_retries = int(os.getenv("RETRY_MAX", 3))
     for attempt in range(max_retries):
         try:
             async with session.get(url) as r:
